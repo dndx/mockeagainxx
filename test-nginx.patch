@@ -1,0 +1,14 @@
+diff --git a/lib/Test/Nginx/Util.pm b/lib/Test/Nginx/Util.pm
+index f3194cf..2f89e96 100644
+--- a/lib/Test/Nginx/Util.pm
++++ b/lib/Test/Nginx/Util.pm
+@@ -1704,6 +1704,9 @@ start_nginx:
+                 my ($exec_failed, $coredump, $exit_code);
+ 
+ RUN_AGAIN:
++                if (defined $ENV{TEST_NGINX_LD_PRELOAD}) {
++                    $cmd = qq!LD_PRELOAD="$ENV{TEST_NGINX_LD_PRELOAD}" $cmd!;
++                }
+                 system($cmd);
+ 
+                 my $status = $?;
