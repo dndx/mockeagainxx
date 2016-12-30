@@ -796,7 +796,8 @@ static void init(void) {
 #endif
 
     if (!(socket_handle && poll_handle && writev_handle && send_handle &&
-          read_handle && recv_handle && recvfrom_handle && close_handle)) {
+          read_handle && recv_handle && recvfrom_handle && close_handle &&
+          ioctl_handle)) {
         fatal("failed to initialize one or more glibc handles");
     }
 
