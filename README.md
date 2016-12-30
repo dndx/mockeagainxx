@@ -1,13 +1,15 @@
 # mockeagain++
 
 This library was inspired by [agentzh](https://github.com/agentzh)'s
-[mockeagain](https://github.com/dndx/mockeagainxx). It does everything
+[mockeagain](https://github.com/openresty/mockeagain). It does everything
 mockeagain does plus the following:
 
 * Full support for mocking the Linux Kernel `epoll` event system (ET and LT).
 * Performance improvements on pattern matching and initialization
 * High resolution sleep timers
 * Various structural refactor to make supporting more event system easy.
+* Support mocking on dynamic number of file descriptors (no more
+`worker_connections 1024` necessary!)
 
 The control plane is the same as `mockeagain`, makes switching effortless.
 
