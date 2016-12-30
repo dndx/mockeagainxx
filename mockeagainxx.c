@@ -28,6 +28,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdarg.h>
+#include <sys/ioctl.h>
 #include "utils.h"
 #if __linux__
 #include <sys/epoll.h>
@@ -51,6 +53,7 @@ typedef struct {
     unsigned           did_write:1;
     unsigned           epollet:1; /* edge triggering? */
     unsigned           active:1;
+    unsigned           is_stream_sock:1;
 } mock_ctx_t;
 
 #define DEFAULT_MAX_FDS 1024
@@ -75,6 +78,7 @@ static ssize_t (*recvfrom_handle)(int sockfd, void *buf, size_t len,
                                   int flags, struct sockaddr *src_addr,
                                   socklen_t *addrlen);
 static int (*close_handle)(int fd);
+static int (*ioctl_handle)(int fd, unsigned long request, ...);
 
 /* stolen from https://gist.github.com/diabloneo/9619917 */
 struct timespec timespec_diff(struct timespec *start, struct timespec *stop) {
@@ -97,7 +101,7 @@ void init_and_get_ctx(int fd) {
 
     memset(c, 0, sizeof(mock_ctx_t));
 
-    c->active = 1;
+    c->active = c->is_stream_sock = 1;
 
     if (pattern) {
         memset(matchbuf, 0, pattern_len);
@@ -181,6 +185,7 @@ static int (*epoll_ctl_handle)(int epfd, int op, int fd,
 int accept4(int socket, struct sockaddr *address,
             socklen_t *address_len, int flags) {
     int fd;
+    mock_ctx_t *c;
 
     fd = accept4_handle(socket, address, address_len, flags);
     if (fd < 0) {
@@ -188,6 +193,8 @@ int accept4(int socket, struct sockaddr *address,
     }
 
     ensure_room_for(fd);
+    c = ctx + fd;
+    c->is_stream_sock = 1;
 
     if (flags & SOCK_NONBLOCK) {
         log("accept4 marked fd=%d for mocking", fd);
@@ -436,10 +443,31 @@ int epoll_wait(int epfd, struct epoll_event *events,
     return ret;
 
 }
-#endif
+#endif /* __linux__ */
+
+int ioctl(int fd, unsigned long request, ...) {
+    va_list ap;
+    int ret;
+    void *data;
+    mock_ctx_t *c = ctx + fd;
+
+    va_start(ap, request);
+    data = va_arg(ap, void *);
+
+    if (request == FIONBIO && *((int *) data) && c->is_stream_sock) {
+        log("socket marked fd=%d for mocking", fd);
+        init_and_get_ctx(fd);
+    }
+
+    ret = ioctl_handle(fd, request, data);
+
+    va_end(ap);
+    return ret;
+}
 
 int socket(int domain, int type, int protocol) {
     int fd;
+    mock_ctx_t *c;
 
     fd = socket_handle(domain, type, protocol);
 
@@ -448,9 +476,8 @@ int socket(int domain, int type, int protocol) {
     }
 
     ensure_room_for(fd);
-
-    log("socket marked fd=%d for mocking", fd);
-    init_and_get_ctx(fd);
+    c = ctx + fd;
+    c->is_stream_sock = 1;
 
     return fd;
 }
@@ -758,6 +785,7 @@ static void init(void) {
     recv_handle = dlsym(RTLD_NEXT, "recv");
     recvfrom_handle = dlsym(RTLD_NEXT, "recvfrom");
     close_handle = dlsym(RTLD_NEXT, "close");
+    ioctl_handle = dlsym(RTLD_NEXT, "ioctl");
 #if __linux__
     accept4_handle = dlsym(RTLD_NEXT, "accept4");
     epoll_wait_handle = dlsym(RTLD_NEXT, "epoll_wait");

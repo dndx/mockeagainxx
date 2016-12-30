@@ -14,34 +14,16 @@ The control plane is the same as `mockeagain`, makes switching effortless.
 For building, using, controlling and testing, refer to [`mockeagain`'s
 documentation](https://github.com/openresty/mockeagain).
 
-## Running with `test-nginx`
-It appears that passing `LD_PRELOAD` to `prove` causes Perl to hang. To prevent
-this, do the following:
-
-```
-$ git clone git@github.com:openresty/test-nginx.git
-$ cd test-nginx
-test-nginx $ patch -p1 < /path/to/mockeagainxx/test-nginx.patch
-test-nginx $ perl Makefile.PL
-test-nginx $ make
-test-nginx $ sudo make install
-```
-
-After that, run tests like this (notice we used `TEST_NGINX_LD_PRELOAD`
-instead of `LD_PRELOAD`):
-
-```
-lua-nginx-module $ TEST_NGINX_LD_PRELOAD=/home/datong/mockeagainxx/mockeagainxx.so MOCKEAGAIN=rw MOCKEAGAIN_VERBOSE=1 TEST_NGINX_EVENT_TYPE=epoll prove -t t/058-tcp-socket.t
-t/058-tcp-socket.t .. ok       
-All tests successful.
-Files=1, Tests=374, 26 wallclock secs ( 0.15 usr  0.07 sys +  7.45 cusr  2.35 csys = 10.02 CPU)
-Result: PASS
-```
-
 ## Limitations
 * `epoll` mocking does **not** support more than one `epoll` instance per
 process. This does not causes issue when using with `nginx` as each `nginx`
 worker maintains only one `epoll` instance.
+* Mocking is only active on non blocking stream sockets. The way `mockeagain++`
+detects this condition is by hooking `accept4()`, `socket()` and `ioctl()`
+system calls and try to interpret state of the file descriptor by observing.
+`fcntl()` is currently not implemented due to the complexity involved in
+hooking it (different sizes of third argument). `nginx` does not uses
+`fcntl()`.
 
 ## Copyright & License
 

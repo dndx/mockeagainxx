@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <fcntl.h>
+#include <sys/ioctl.h>
 #include "test_case.h"
 
 int main(int argc, char *argv[])
@@ -45,9 +45,10 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    s = 1;
     /* make it non-blocking after connect to save some work */
-    if (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK) == -1) {
-          perror("fcntl failed");
+    if (ioctl(fd, FIONBIO, &s) == -1) {
+          perror("ioctl failed");
     }
 
     freeaddrinfo(result);
