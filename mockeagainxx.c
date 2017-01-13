@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <fcntl.h>
 #include <sys/ioctl.h>
 #include "utils.h"
 #if __linux__
@@ -79,6 +80,7 @@ static ssize_t (*recvfrom_handle)(int sockfd, void *buf, size_t len,
                                   socklen_t *addrlen);
 static int (*close_handle)(int fd);
 static int (*ioctl_handle)(int fd, unsigned long request, ...);
+static int (*fcntl_handle)(int fd, int cmd, ...);
 
 /* stolen from https://gist.github.com/diabloneo/9619917 */
 struct timespec timespec_diff(struct timespec *start, struct timespec *stop) {
@@ -469,6 +471,51 @@ int ioctl(int fd, unsigned long request, ...) {
     return ret;
 }
 
+int fcntl(int fd, int cmd, ...) {
+    va_list     ap;
+    int         ret;
+    void       *data;
+    int         flag;
+    mock_ctx_t *c = ctx + fd;
+
+    va_start(ap, cmd);
+
+    /* case 1, third argument is void */
+    if (cmd == F_GETFD || cmd == F_GETFL || cmd == F_GETOWN ||
+        cmd == F_GETSIG || cmd == F_GETLEASE || cmd == F_GETPIPE_SZ
+#ifdef F_GET_SEALS
+        || cmd == F_GET_SEALS
+#endif
+    ) {
+        ret = fcntl_handle(fd, cmd);
+    } else if (cmd == F_DUPFD || cmd == F_DUPFD_CLOEXEC || cmd == F_SETFD ||
+               cmd == F_SETFL || cmd == F_SETOWN || cmd == F_SETSIG ||
+               cmd == F_SETLEASE || cmd == F_NOTIFY || cmd == F_SETPIPE_SZ
+#ifdef F_ADD_SEALS
+               || cmd == F_ADD_SEALS
+#endif
+    ) { /* third argument is int */
+        flag = va_arg(ap, int);
+
+        if (cmd == F_SETFL && c->is_stream_sock) {
+            if (flag & O_NONBLOCK) {
+                log("fcntl marked fd=%d for mocking", fd);
+                init_and_get_ctx(fd);
+            } else {
+                c->active = 0;
+            }
+        }
+
+        ret = fcntl_handle(fd, cmd, flag);
+    } else { /* third argument is void * */
+        data = va_arg(ap, void *);
+        ret = fcntl_handle(fd, cmd, data);
+    }
+
+    va_end(ap);
+    return ret;
+}
+
 int socket(int domain, int type, int protocol) {
     int fd;
     mock_ctx_t *c;
@@ -790,6 +837,7 @@ static void init(void) {
     recvfrom_handle = dlsym(RTLD_NEXT, "recvfrom");
     close_handle = dlsym(RTLD_NEXT, "close");
     ioctl_handle = dlsym(RTLD_NEXT, "ioctl");
+    fcntl_handle = dlsym(RTLD_NEXT, "fcntl");
 #if __linux__
     accept4_handle = dlsym(RTLD_NEXT, "accept4");
     epoll_wait_handle = dlsym(RTLD_NEXT, "epoll_wait");
@@ -801,7 +849,7 @@ static void init(void) {
 
     if (!(socket_handle && poll_handle && writev_handle && send_handle &&
           read_handle && recv_handle && recvfrom_handle && close_handle &&
-          ioctl_handle)) {
+          ioctl_handle && fcntl_handle)) {
         fatal("failed to initialize one or more glibc handles");
     }
 

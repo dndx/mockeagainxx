@@ -1,5 +1,5 @@
 CC=gcc
-COPTS=-O -g -Wall -Werror -std=gnu99
+COPTS=-O -g -Wall -Werror -std=gnu99 -Wl,--no-as-needed -lrt
 ifneq ($(MAKECMDGOALS),test)
 	COPTS+= -DNDEBUG
 endif
@@ -41,6 +41,12 @@ test: all $(ALL_TESTS)
 	|| exit 1; \
 	python ./t/echo_server.py ./t/runner $(VALGRIND) \
 	&& echo "Test case 003-disabled.c passed" || exit 1;
+	# 004
+	export $(TESTENV); \
+	$(CC) $(COPTS) -o ./t/runner ./t/004-setnonblocking.c ./t/runner.c ./t/test_case.c \
+	|| exit 1; \
+	MOCKEAGAIN=w python ./t/echo_server.py ./t/runner $(VALGRIND) \
+	&& echo "Test case 004-setnonblocking.c passed" || exit 1;
 
 clean:
 	rm -rf *.so *.o *.lo t/runner
