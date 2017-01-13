@@ -454,9 +454,13 @@ int ioctl(int fd, unsigned long request, ...) {
     va_start(ap, request);
     data = va_arg(ap, void *);
 
-    if (request == FIONBIO && *((int *) data) && c->is_stream_sock) {
-        log("socket marked fd=%d for mocking", fd);
-        init_and_get_ctx(fd);
+    if (request == FIONBIO && c->is_stream_sock) {
+        if (*((int *) data)) {
+            log("ioctl marked fd=%d for mocking", fd);
+            init_and_get_ctx(fd);
+        } else {
+            c->active = 0;
+        }
     }
 
     ret = ioctl_handle(fd, request, data);
