@@ -1,5 +1,7 @@
 # mockeagain++
 
+[![Build Status](https://travis-ci.org/dndx/mockeagainxx.svg?branch=master)](https://travis-ci.org/dndx/mockeagainxx)
+
 This library was inspired by [agentzh](https://github.com/agentzh)'s
 [mockeagain](https://github.com/openresty/mockeagain). It does everything
 mockeagain does plus the following:
