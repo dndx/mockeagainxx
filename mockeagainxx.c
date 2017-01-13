@@ -208,7 +208,7 @@ int close(int fd) {
     log("close fd = %d", fd);
 
     if (fd <= max_fd) {
-        ctx[fd].active = 0;
+        ctx[fd].active = ctx[fd].is_stream_sock = 0;
     }
 
     return close_handle(fd);
