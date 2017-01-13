@@ -1,5 +1,5 @@
 CC=gcc
-COPTS=-O -g -Wall -Werror -std=gnu99
+COPTS=-O -g -Wall -Werror -std=gnu99 -Wl,--no-as-needed -lrt
 ifneq ($(MAKECMDGOALS),test)
 	COPTS+= -DNDEBUG
 endif
