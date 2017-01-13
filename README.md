@@ -21,11 +21,9 @@ documentation](https://github.com/openresty/mockeagain).
 process. This does not causes issue when using with `nginx` as each `nginx`
 worker maintains only one `epoll` instance.
 * Mocking is only active on non blocking stream sockets. The way `mockeagain++`
-detects this condition is by hooking `accept4()`, `socket()` and `ioctl()`
-system calls and try to interpret state of the file descriptor by observing.
-`fcntl()` is currently not implemented due to the complexity involved in
-hooking it (different sizes of third argument). `nginx` does not uses
-`fcntl()`.
+detects this condition is by hooking `accept4()`, `socket()`, `ioctl()` and
+`fcntl()` system calls and try to interpret state of the file descriptor by
+observing.
 
 ## Copyright & License
 
