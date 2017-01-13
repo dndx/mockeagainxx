@@ -1,5 +1,8 @@
 CC=gcc
-COPTS=-O -g -Wall -Werror -std=gnu99 #-DNDEBUG
+COPTS=-O -g -Wall -Werror -std=gnu99
+ifneq ($(MAKECMDGOALS),test)
+	COPTS+= -DNDEBUG
+endif
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TESTENV=LD_PRELOAD=$(ROOT_DIR)/mockeagainxx.so MOCKEAGAIN_VERBOSE=1
 ALL_TESTS=$(shell find t -name "[0-9]*.c")
